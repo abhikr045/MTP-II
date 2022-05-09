@@ -2,3 +2,7 @@
     'val' accuracy  = 88.65 % (old value during R&D = 86.18 %)
     'test' accuracy = 95.28 % (old value during R&D = 88.88 %)
 
+# Regression on MIT data + Transfer Learning for classification on UK data (as per UK device's LRC)
+  Face blurred (gauss blur radius = 15 | 50 | 100)  |  face blacked out  |  only eyes blacked out  |  face+eyes blacked out before testing
+    'val' accuracy  = 86.86 %  |  86.60 %  |  86.63 %  |  86.63 %  |  38.98 %  |  38.98 %
+    'test' accuracy = 94.67 %  |  94.28 %  |  94.20 %  |  94.12 %  |  39.00 %  |  39.00 %
