@@ -123,7 +123,8 @@ class ITrackerModel(nn.Module):
 			self.fc = nn.Sequential(
 				nn.Linear(128+64+128, 128),			# output = Size([N, 128])
 				nn.ReLU(inplace=True),
-				nn.Linear(128, 3),			# For L,R,C		# output = Size([N, 3])
+                nn.Linear(128, 2),
+				# nn.Linear(128, 3),			# For L,R,C		# output = Size([N, 3])
 				# nn.Linear(128, 4),		# For L,R,C,Out	# output = Size([N, 4])
 				)
 		else:

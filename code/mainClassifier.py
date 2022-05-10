@@ -34,15 +34,15 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/DlibHoG_UK_TL_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_TL_train_35.pth.tar'
-CHECKPOINT_SAVE_FILE = ''
+CHECKPOINTS_PATH = 'saved_models/DlibHoG_MIT_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
+CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
-VAL_ON = 'test'
+VAL_ON = 'val'
 
 TOT_VALID = 786732	# total valid frames in the dataset
 KIND = 'classification'
@@ -75,7 +75,7 @@ doLoad = not args.reset # Load checkpoint at the beginning
 doTest = args.sink # Only run test, no training
 
 workers = 4
-epochs = 25
+epochs = 35
 batch_size = 100 # Change if out of cuda memory
 
 base_lr = 0.001
@@ -178,21 +178,21 @@ def main():
 			#############################
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
-			# # Fix all conv layers
-			# model.faceModel.conv.requires_grad = False
-			# model.eyeModel.requires_grad = False
+			# Fix all conv layers
+			model.faceModel.conv.requires_grad = False
+			model.eyeModel.requires_grad = False
 
-			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
-			# lin1_inFtrs = model.fc[0].in_features
-			# lin1_outFtrs = model.fc[0].out_features
-			# lin2_inFtrs = model.fc[2].in_features
-			# model.fc = nn.Sequential(
-			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
-			# 	nn.ReLU(inplace=True),
-			# 	nn.Linear(lin2_inFtrs, 3),	# 3 outputs corresponding to LRC
-			# 	)
+			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
+			lin1_inFtrs = model.fc[0].in_features
+			lin1_outFtrs = model.fc[0].out_features
+			lin2_inFtrs = model.fc[2].in_features
+			model.fc = nn.Sequential(
+				nn.Linear(lin1_inFtrs, lin1_outFtrs),
+				nn.ReLU(inplace=True),
+				nn.Linear(lin2_inFtrs, 3),	# 3 outputs corresponding to LRC
+				)
 
-			# model.to(device=GPU_device)
+			model.to(device=GPU_device)
 			#############################
 			##### Transfer Learning #####
 			#############################
@@ -235,14 +235,14 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	# trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
-	# optimizer = torch.optim.SGD(trainableParams,
-	# 							base_lr, momentum=momentum,
-	# 							weight_decay=weight_decay)
-	########################################################################################################
-	optimizer = torch.optim.SGD(model.parameters(),
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
+	########################################################################################################
+	# optimizer = torch.optim.SGD(model.parameters(),
+	# 							base_lr, momentum=momentum,
+	# 							weight_decay=weight_decay)
 
 	# Quick test
 	if doTest:

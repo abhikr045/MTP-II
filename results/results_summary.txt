@@ -3,6 +3,13 @@
     'test' accuracy = 95.28 % (old value during R&D = 88.88 %)
 
 # Regression on MIT data + Transfer Learning for classification on UK data (as per UK device's LRC)
-  Face blurred (gauss blur radius = 15 | 50 | 100)  |  face blacked out  |  only eyes blacked out  |  face+eyes blacked out before testing
+  Inference with: Face blurred (gauss blur radius = 15 | 50 | 100)  |  face blacked out  |  only eyes blacked out  |  face+eyes blacked out before testing
     'val' accuracy  = 86.86 %  |  86.60 %  |  86.63 %  |  86.63 %  |  38.98 %  |  38.98 %
     'test' accuracy = 94.67 %  |  94.28 %  |  94.20 %  |  94.12 %  |  39.00 %  |  39.00 %
+
+# Regression on MIT data (used the model trained during R&D) + Transfer Learning for classification on UK data
+  TL training & Inference with: No blurring  |  Face blurred (gauss blur radius = 15)  |  face blacked out
+
+
+NOTE - For above results, extractor = DlibHoG
+TODO - Use RetinaFace for final approach
