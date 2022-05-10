@@ -181,6 +181,15 @@ def main():
 			# Fix all conv layers
 			model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
+			### Above code is wrong (i.e., it doesn't change 'requires_grad' to False).
+			### Correct way is given below -
+			# for param in model.parameters():
+			# 	param.requires_grad = False
+			### This changes 'requires_grad' of all params to False. So, after this step, 'requires_grad' of trainable layers (if any) need to be set back to True.
+			### NOTE-1 : Even though 'requires_grad' was wrongly set to False during R&D (i.e., it remained True in reality),
+			### 		 these layers remain frozen becoz these layers aren't listed in optimizer as trainable layers. So, TL code during R&D is not wrong.
+			### NOTE-2 : Verified via debugging that whether 'requires_grad' for frozen layers are set to False or not, these layers will be frozen
+			###			 if not listed in optimizer as trainable layers.
 
 			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
 			lin1_inFtrs = model.fc[0].in_features
