@@ -110,7 +110,7 @@ class ITrackerData(data.Dataset):
 		self.eyeRightMean = loadMetadata(os.path.join(meanPath, '%s_right_224.mat' % meanFile))['image_mean']
 		
 		self.transformFace = transforms.Compose([
-			blurFace(r=50),
+			blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.faceMean),

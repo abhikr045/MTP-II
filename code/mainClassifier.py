@@ -34,8 +34,8 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/DlibHoG_MIT_checkpoints_train_TL-noFaceInput'
-CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
+CHECKPOINTS_PATH = 'saved_models/DlibHoG_UK_TL-blurFace-r15_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_34.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata.mat'
 MEAN_PATH = 'metadata/'
@@ -85,7 +85,7 @@ prec1 = 0
 best_prec1 = 0
 lr = base_lr
 
-GPU_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+GPU_device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 def load_checkpoint(filename=CHECKPOINT_LOAD_FILE):
@@ -166,18 +166,6 @@ def main():
 		if saved:
 			print('Loading checkpoint of epoch %05d with best_prec1 %.5f (which is the mean L2 (i.e. linear) error in cm)...' % (saved['epoch'], saved['best_prec1']))
 			state = saved['state_dict']
-
-			# Removing 'faceModel' from the pre-trained model (trained with 'faceModel' in Phase-1 of TL) to be loaded for Phase-2 of TL without face input
-			modulesToRemove = []
-			for k in state:
-				if ('faceModel' in k):
-					modulesToRemove.append(k)
-			for moduleToRemove in modulesToRemove:
-				del state[moduleToRemove]
-			# Since face input is removed from NN, no. of input neurons in linear layer 'fc.0' changes from 320 to 256. So, 'fc.0.weight' needs to be of shape (128,256), instead of (128,320) saved in the model to be loaded.
-			# So, temporarily loading dummy tensor of zeros of shape (128,256) in state['fc.0.weight']. Later, model.fc is initialized with new nn.Sequential(), so dummy tensor removed.
-			state['fc.0.weight'] = torch.zeros((128, 256), device=GPU_device)
-
 			try:
 				model.module.load_state_dict(state)
 			except:
@@ -191,27 +179,18 @@ def main():
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
 			# Fix all conv layers
-			# model.faceModel.conv.requires_grad = False
+			model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
-			### Above code is wrong (i.e., it doesn't change 'requires_grad' to False).
-			### Correct way is given below -
-			# for param in model.parameters():
-			# 	param.requires_grad = False
-			### This changes 'requires_grad' of all params to False. So, after this step, 'requires_grad' of trainable layers (if any) need to be set back to True.
-			### NOTE-1 : Even though 'requires_grad' was wrongly set to False during R&D (i.e., it remained True in reality),
-			### 		 these layers remain frozen becoz these layers aren't listed in optimizer as trainable layers. So, TL code during R&D is not wrong.
-			### NOTE-2 : Verified via debugging that whether 'requires_grad' for frozen layers are set to False or not, these layers will be frozen
-			###			 if not listed in optimizer as trainable layers.
 
-			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
-			lin1_inFtrs = model.fc[0].in_features
-			lin1_outFtrs = model.fc[0].out_features
-			lin2_inFtrs = model.fc[2].in_features
-			model.fc = nn.Sequential(
-				nn.Linear(lin1_inFtrs, lin1_outFtrs),
-				nn.ReLU(inplace=True),
-				nn.Linear(lin2_inFtrs, 3),	# 3 outputs corresponding to LRC
-				)
+			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
+			# lin1_inFtrs = model.fc[0].in_features
+			# lin1_outFtrs = model.fc[0].out_features
+			# lin2_inFtrs = model.fc[2].in_features
+			# model.fc = nn.Sequential(
+			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
+			# 	nn.ReLU(inplace=True),
+			# 	nn.Linear(lin2_inFtrs, 3),	# 3 outputs corresponding to LRC
+			# 	)
 
 			model.to(device=GPU_device)
 			#############################
@@ -256,7 +235,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
