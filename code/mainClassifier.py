@@ -34,15 +34,15 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/DlibHoG_UK_TL-blurFace-r15_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_train_34.pth.tar'
+CHECKPOINTS_PATH = 'saved_models/DlibHoG_UK_TL-noFace_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_35.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
-VAL_ON = 'val'
+VAL_ON = 'test'
 
 TOT_VALID = 786732	# total valid frames in the dataset
 KIND = 'classification'
@@ -179,7 +179,7 @@ def main():
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
 			# Fix all conv layers
-			model.faceModel.conv.requires_grad = False
+			# model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
 
 			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
@@ -235,7 +235,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
