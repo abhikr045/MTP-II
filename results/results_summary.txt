@@ -1,4 +1,0 @@
-# Regression on MIT data + Transfer Learning for classification on UK data (as per UK device's LRC)
-    'val' accuracy  = 88.65 % (old value during R&D = 86.18 %)
-    'test' accuracy = 95.28 % (old value during R&D = 88.88 %)
-

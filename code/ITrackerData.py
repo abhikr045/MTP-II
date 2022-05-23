@@ -1,6 +1,6 @@
 import torch.utils.data as data
 import scipy.io as sio
-from PIL import Image
+from PIL import Image, ImageFilter
 import os
 import os.path
 import torchvision.transforms as transforms
@@ -58,6 +58,18 @@ class SubtractMean(object):
 		"""       
 		return tensor.sub(self.meanImg)
 
+class blurFace(object):
+	def __init__(self, r):
+		self.r = r
+
+	def __call__(self, PILimg):
+		# blurImg = PILimg.filter(ImageFilter.GaussianBlur(radius=self.r))
+		# # blurImg.save('results/blurFace/sampleBlurFace_r-%d.jpg' % self.r)
+		# return blurImg
+
+		blackImg = Image.new('RGB', (224,224), "black")
+		# blackImg.save('results/blackFace.jpg')
+		return blackImg
 
 class ITrackerData(data.Dataset):
 	def __init__(self, dataPath, metafile, meanPath, split='train', imSize=(224,224), gridSize=(25, 25), kind='regression', device=None):
@@ -98,16 +110,19 @@ class ITrackerData(data.Dataset):
 		self.eyeRightMean = loadMetadata(os.path.join(meanPath, '%s_right_224.mat' % meanFile))['image_mean']
 		
 		self.transformFace = transforms.Compose([
+            blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.faceMean),
 		])
 		self.transformEyeL = transforms.Compose([
+            # blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.eyeLeftMean),
 		])
 		self.transformEyeR = transforms.Compose([
+            # blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.eyeRightMean),
@@ -167,17 +182,18 @@ class ITrackerData(data.Dataset):
 		imEyeL = self.transformEyeL(imEyeL)
 		imEyeR = self.transformEyeR(imEyeR)
 
-		if self.kind == 'regression':
-			##### For testing XY in [0,1] #####
-			# gaze = np.array([self.metadata['labelDotXCam_0to1'][index], self.metadata['labelDotYCam_0to1'][index]], np.float32)
-			###################################
-			gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
-			gaze = torch.FloatTensor(gaze)
-		elif self.kind == 'classification':
-			gaze = self.metadata['gazeLRC'][index]
-		else:
-			print("INVALID kind of dataset (expected 'regression' or 'classification')..!!")
-			sys.exit(1)
+		# if self.kind == 'regression':
+		# 	##### For testing XY in [0,1] #####
+		# 	# gaze = np.array([self.metadata['labelDotXCam_0to1'][index], self.metadata['labelDotYCam_0to1'][index]], np.float32)
+		# 	###################################
+		# 	gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
+		# 	gaze = torch.FloatTensor(gaze)
+		# elif self.kind == 'classification':
+		# 	gaze = self.metadata['gazeLRC'][index]
+		# else:
+		# 	print("INVALID kind of dataset (expected 'regression' or 'classification')..!!")
+		# 	sys.exit(1)
+		gaze = self.metadata['gazeLR'][index]
 
 		faceGrid = self.makeGrid(self.metadata['labelFaceGrid'][index,:])
 		rec_frame = '%d_%d' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index])
