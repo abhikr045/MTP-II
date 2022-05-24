@@ -174,6 +174,18 @@ def main():
 		if saved:
 			print('Loading checkpoint of epoch %05d with best_prec1 %.5f (which is the mean L2 (i.e. linear) error in cm)...' % (saved['epoch'], saved['best_prec1']))
 			state = saved['state_dict']
+
+			# Removing 'faceModel' from the pre-trained model (trained with 'faceModel' during Regression on MIT data) to be loaded for Post-classification without face input
+			modulesToRemove = []
+			for k in state:
+				if ('faceModel' in k):
+					modulesToRemove.append(k)
+			for moduleToRemove in modulesToRemove:
+				del state[moduleToRemove]
+			# Since face input is removed from NN, no. of input neurons in linear layer 'fc.0' changes from 128+64+128=320 to 128+128=256. So, 'fc.0.weight' needs to be of shape (128,256), instead of (128,320) saved in the model to be loaded.
+			# So, removing the 64 input neurons corresponding to the 'faceModel' from 'fc.0.weight'
+			state['fc.0.weight'] = torch.cat((state['fc.0.weight'][:,:128], state['fc.0.weight'][:,192:]), dim=1)
+
 			try:
 				model.module.load_state_dict(state)
 			except:
