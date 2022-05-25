@@ -34,7 +34,7 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blackedFace_checkpoints_train'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-noFace_checkpoints_train'
 CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
@@ -166,6 +166,18 @@ def main():
 		if saved:
 			print('Loading checkpoint of epoch %05d with best_prec1 %.5f (which is the mean L2 (i.e. linear) error in cm)...' % (saved['epoch'], saved['best_prec1']))
 			state = saved['state_dict']
+
+			# Removing 'faceModel' from the pre-trained model (trained with 'faceModel' in Phase-1 of TL) to be loaded for Phase-2 of TL without face input
+			modulesToRemove = []
+			for k in state:
+				if ('faceModel' in k):
+					modulesToRemove.append(k)
+			for moduleToRemove in modulesToRemove:
+				del state[moduleToRemove]
+			# Since face input is removed from NN, no. of input neurons in linear layer 'fc.0' changes from 320 to 256. So, 'fc.0.weight' needs to be of shape (128,256), instead of (128,320) saved in the model to be loaded.
+			# So, temporarily loading dummy tensor of zeros of shape (128,256) in state['fc.0.weight']. Later, model.fc is initialized with new nn.Sequential(), so dummy tensor removed.
+			state['fc.0.weight'] = torch.zeros((128, 256), device=GPU_device)
+
 			try:
 				model.module.load_state_dict(state)
 			except:
@@ -179,7 +191,7 @@ def main():
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
 			# Fix all conv layers
-			model.faceModel.conv.requires_grad = False
+			# model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
 
 			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
@@ -241,7 +253,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
