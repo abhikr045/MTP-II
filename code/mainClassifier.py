@@ -34,15 +34,15 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/DlibHoG_UK_TL_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_TL_train_35.pth.tar'
-CHECKPOINT_SAVE_FILE = ''
-METAFILE = 'metadata.mat'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blackedFace_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
+CHECKPOINT_SAVE_FILE = 'checkpoint'
+METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
-VAL_ON = 'test'
+VAL_ON = 'val'
 
 TOT_VALID = 786732	# total valid frames in the dataset
 KIND = 'classification'
@@ -75,7 +75,7 @@ doLoad = not args.reset # Load checkpoint at the beginning
 doTest = args.sink # Only run test, no training
 
 workers = 4
-epochs = 25
+epochs = 35
 batch_size = 100 # Change if out of cuda memory
 
 base_lr = 0.001
@@ -100,11 +100,11 @@ def load_checkpoint(filename=CHECKPOINT_LOAD_FILE):
 def save_checkpoint(state, is_best, filename=CHECKPOINT_SAVE_FILE):
 	if not os.path.isdir(CHECKPOINTS_PATH):
 		os.makedirs(CHECKPOINTS_PATH, 0o777)
-	bestFilename = os.path.join(CHECKPOINTS_PATH, 'best_' + filename)
+	bestFilename = os.path.join(CHECKPOINTS_PATH, filename.replace('.pth.tar', '_best.pth.tar'))
 	filename = os.path.join(CHECKPOINTS_PATH, filename)
 	torch.save(state, filename)
-	# if is_best:
-	# 	shutil.copyfile(filename, bestFilename)
+	if is_best:
+		shutil.copyfile(filename, bestFilename)
 
 
 def adjust_learning_rate(epoch):
@@ -178,21 +178,21 @@ def main():
 			#############################
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
-			# # Fix all conv layers
-			# model.faceModel.conv.requires_grad = False
-			# model.eyeModel.requires_grad = False
+			# Fix all conv layers
+			model.faceModel.conv.requires_grad = False
+			model.eyeModel.requires_grad = False
 
-			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R/C
-			# lin1_inFtrs = model.fc[0].in_features
-			# lin1_outFtrs = model.fc[0].out_features
-			# lin2_inFtrs = model.fc[2].in_features
-			# model.fc = nn.Sequential(
-			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
-			# 	nn.ReLU(inplace=True),
-			# 	nn.Linear(lin2_inFtrs, 3),	# 3 outputs corresponding to LRC
-			# 	)
+			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
+			lin1_inFtrs = model.fc[0].in_features
+			lin1_outFtrs = model.fc[0].out_features
+			lin2_inFtrs = model.fc[2].in_features
+			model.fc = nn.Sequential(
+				nn.Linear(lin1_inFtrs, lin1_outFtrs),
+				nn.ReLU(inplace=True),
+				nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
+				)
 
-			# model.to(device=GPU_device)
+			model.to(device=GPU_device)
 			#############################
 			##### Transfer Learning #####
 			#############################
@@ -223,26 +223,32 @@ def main():
 	# No. of gazeC in 'train' =   466,161
 	# No. of gazeR in 'train' =    47,217
 	# No. of gazeOut in 'train' = 564,253
-	gazeLRC_classes = dataTrain.metadata['gazeLRC']
+
+	# gazeLRC_classes = dataTrain.metadata['gazeLRC']
+	# trainSplit = dataTrain.metadata['labelTrain']
+	# trainGazeLRC = gazeLRC_classes[trainSplit == 1]
+	# gazeClasses = np.array([0,1,2])	# For UK dataset OR iPadAir2 subset of MIT, 3 labels - L,C & R
+	gazeLR_classes = dataTrain.metadata['gazeLR']
 	trainSplit = dataTrain.metadata['labelTrain']
-	trainGazeLRC = gazeLRC_classes[trainSplit == 1]
-	gazeClasses = np.array([0,1,2])	# For UK dataset OR iPadAir2 subset of MIT, 3 labels - L,C & R
+	trainGazeLR = gazeLR_classes[trainSplit == 1]
+	gazeClasses = np.array([0,1])
+
 	# gazeClasses = np.array([0,1,2,3])	# For MIT dataset, 4 labels - L,C,R & Out
-	weights = compute_class_weight('balanced', classes=gazeClasses, y=trainGazeLRC)
+	weights = compute_class_weight('balanced', classes=gazeClasses, y=trainGazeLR)
 	weights = weights / weights.sum()
 	weights = torch.Tensor(weights)
 	criterion = nn.CrossEntropyLoss(weight=weights).to(device=GPU_device)
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	# trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
-	# optimizer = torch.optim.SGD(trainableParams,
-	# 							base_lr, momentum=momentum,
-	# 							weight_decay=weight_decay)
-	########################################################################################################
-	optimizer = torch.optim.SGD(model.parameters(),
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
+	########################################################################################################
+	# optimizer = torch.optim.SGD(model.parameters(),
+	# 							base_lr, momentum=momentum,
+	# 							weight_decay=weight_decay)
 
 	# Quick test
 	if doTest:
@@ -335,6 +341,24 @@ def main():
 	# for epoch in range(0, epoch):
 	# 	adjust_learning_rate(optimizer, epoch)
 	
+	train_loss = []
+	train_epochs = list(range(epoch, epochs+1))
+	val_acc = []
+	val_epochs = list(range(epoch-1, epochs+1))
+
+	# evaluate on validation set
+	prec1 = validate(val_loader, model, criterion, epoch-1)
+	val_acc.append(prec1)
+	best_prec1 = prec1
+	print("Validation DONE. Saving checkpoint with validations's best_prec1 ...")
+	# remember best prec@1 and save checkpoint
+	save_checkpoint({
+		'epoch': epoch-1,
+		'state_dict': model.state_dict(),
+		'best_prec1': best_prec1,
+	}, False, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch-1))
+	print('Checkpoint overwritten successfully.')
+
 	#### Training Code for Classification #####
 	for epoch in range(epoch, epochs+1):
 		lr = adjust_learning_rate(epoch-1)
@@ -342,30 +366,37 @@ def main():
 			param_group['lr'] = lr
 
 		# train for one epoch
-		train(train_loader, model, criterion, optimizer, epoch)
+		cur_train_loss = train(train_loader, model, criterion, optimizer, epoch)
+		train_loss.append(cur_train_loss)
 
-		print("Training DONE. Saving checkpoint with previous checkpoint's best_prec1 ...")
-		save_checkpoint({
-			'epoch': epoch,
-			'state_dict': model.state_dict(),
-			'best_prec1': best_prec1,
-		}, False, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
-		print('Checkpoint saved successfully.')
+		print("Training DONE. Not saving checkpoint for this ...")
+		# save_checkpoint({
+		# 	'epoch': epoch,
+		# 	'state_dict': model.state_dict(),
+		# 	'best_prec1': best_prec1,
+		# 	'train_losses': train_loss,
+		# 	'val_accs': val_acc
+		# }, False, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
+		# print('Checkpoint saved successfully.')
 		# print('Training DONE. Not saving checkpoint for this...')
 
 		# evaluate on validation set
 		prec1 = validate(val_loader, model, criterion, epoch)
+		val_acc.append(prec1)
 		print("Validation DONE. Overwriting checkpoint with validations's best_prec1 ...")
 		# remember best prec@1 and save checkpoint
 		is_best = prec1 > best_prec1
 		best_prec1 = max(prec1, best_prec1)
-		save_checkpoint({
-			'epoch': epoch,
-			'state_dict': model.state_dict(),
-			'best_prec1': best_prec1,
-		}, is_best, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
-		print('Checkpoint overwritten successfully.')
-		# print('Validation DONE. Not saving checkpoint for this...')
+		if (is_best or epoch == epochs):
+			save_checkpoint({
+				'epoch': epoch,
+				'state_dict': model.state_dict(),
+				'best_prec1': best_prec1,
+				'train_losses': train_loss,
+				'val_accs': val_acc
+			}, is_best, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
+			print('Checkpoint overwritten successfully.')
+			# print('Validation DONE. Not saving checkpoint for this...')
 	###########################################
 
 
@@ -425,6 +456,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 				   epoch, i+1, len(train_loader), batch_time=batch_time,
 				   data_time=data_time, loss=losses))
 
+	return losses.avg
 
 def validate(val_loader, model, criterion, epoch):
 	global accOnlyLRC

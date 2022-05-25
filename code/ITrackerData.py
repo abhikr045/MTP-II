@@ -182,18 +182,18 @@ class ITrackerData(data.Dataset):
 		imEyeL = self.transformEyeL(imEyeL)
 		imEyeR = self.transformEyeR(imEyeR)
 
-		# if self.kind == 'regression':
-		# 	##### For testing XY in [0,1] #####
-		# 	# gaze = np.array([self.metadata['labelDotXCam_0to1'][index], self.metadata['labelDotYCam_0to1'][index]], np.float32)
-		# 	###################################
-		# 	gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
-		# 	gaze = torch.FloatTensor(gaze)
-		# elif self.kind == 'classification':
-		# 	gaze = self.metadata['gazeLRC'][index]
-		# else:
-		# 	print("INVALID kind of dataset (expected 'regression' or 'classification')..!!")
-		# 	sys.exit(1)
-		gaze = self.metadata['gazeLR'][index]
+		if self.kind == 'regression':
+			##### For testing XY in [0,1] #####
+			# gaze = np.array([self.metadata['labelDotXCam_0to1'][index], self.metadata['labelDotYCam_0to1'][index]], np.float32)
+			###################################
+			gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
+			gaze = torch.FloatTensor(gaze)
+		elif self.kind == 'classification':
+			gaze = self.metadata['gazeLR'][index]
+		else:
+			print("INVALID kind of dataset (expected 'regression' or 'classification')..!!")
+			sys.exit(1)
+		# gaze = self.metadata['gazeLR'][index]
 
 		faceGrid = self.makeGrid(self.metadata['labelFaceGrid'][index,:])
 		rec_frame = '%d_%d' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index])
