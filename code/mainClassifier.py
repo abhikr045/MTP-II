@@ -34,8 +34,8 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blackedFace_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_train_32_best.pth.tar'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-noFace_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_34_best.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
 MEAN_PATH = 'metadata/'
@@ -179,7 +179,7 @@ def main():
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
 			# Fix all conv layers
-			model.faceModel.conv.requires_grad = False
+			# model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
 
 			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
@@ -241,7 +241,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
