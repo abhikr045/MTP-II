@@ -104,14 +104,14 @@ class ITrackerModel(nn.Module):
 
 	def __init__(self, kind='regression'):
 		super(ITrackerModel, self).__init__()
-		self.eyeModel = ItrackerImageModel()	# output = Size([N, 9216])
-		# self.faceModel = FaceImageModel()		# output = Size([N, 64])
+		# self.eyeModel = ItrackerImageModel()	# output = Size([N, 9216])
+		self.faceModel = FaceImageModel()		# output = Size([N, 64])
 		self.gridModel = FaceGridModel()		# output = Size([N, 128])
 		# Joining both eyes
-		self.eyesFC = nn.Sequential(
-			nn.Linear(2*12*12*64, 128),			# output = Size([N, 128])
-			nn.ReLU(inplace=True),
-			)
+		# self.eyesFC = nn.Sequential(
+		# 	nn.Linear(2*12*12*64, 128),			# output = Size([N, 128])
+		# 	nn.ReLU(inplace=True),
+		# 	)
 		# Joining everything
 		if kind == 'regression':
 			self.fc = nn.Sequential(
@@ -123,7 +123,8 @@ class ITrackerModel(nn.Module):
 		elif kind == 'classification':
 			self.fc = nn.Sequential(
 				# nn.Linear(128+64+128, 128),			# output = Size([N, 128])
-                nn.Linear(128+128, 128),
+				# nn.Linear(128+128, 128),
+				nn.Linear(64+128, 128),
 				nn.ReLU(inplace=True),
 				nn.Linear(128, 2),
 				# nn.Linear(128, 3),			# For L,R,C		# output = Size([N, 3])
@@ -134,20 +135,21 @@ class ITrackerModel(nn.Module):
 			sys.exit(1)
 
 	def forward(self, faces, eyesLeft, eyesRight, faceGrids):
-		# Eye nets
-		xEyeL = self.eyeModel(eyesLeft)
-		xEyeR = self.eyeModel(eyesRight)
-		# Cat and FC
-		xEyes = torch.cat((xEyeL, xEyeR), 1)
-		xEyes = self.eyesFC(xEyes)
+		# # Eye nets
+		# xEyeL = self.eyeModel(eyesLeft)
+		# xEyeR = self.eyeModel(eyesRight)
+		# # Cat and FC
+		# xEyes = torch.cat((xEyeL, xEyeR), 1)
+		# xEyes = self.eyesFC(xEyes)
 
 		# Face net
-		# xFace = self.faceModel(faces)
+		xFace = self.faceModel(faces)
 		xGrid = self.gridModel(faceGrids)
 
 		# Cat all
 		# x = torch.cat((xEyes, xFace, xGrid), 1)
-		x = torch.cat((xEyes, xGrid), 1)
+		# x = torch.cat((xEyes, xGrid), 1)
+		x = torch.cat((xFace, xGrid), 1)
 		x = self.fc(x)
 		
 		return x
