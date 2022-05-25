@@ -34,15 +34,15 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-noFace_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blackedFace_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_32_best.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
-VAL_ON = 'val'
+VAL_ON = 'test'
 
 TOT_VALID = 786732	# total valid frames in the dataset
 KIND = 'classification'
@@ -85,7 +85,7 @@ prec1 = 0
 best_prec1 = 0
 lr = base_lr
 
-GPU_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+GPU_device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 def load_checkpoint(filename=CHECKPOINT_LOAD_FILE):
@@ -166,18 +166,6 @@ def main():
 		if saved:
 			print('Loading checkpoint of epoch %05d with best_prec1 %.5f (which is the mean L2 (i.e. linear) error in cm)...' % (saved['epoch'], saved['best_prec1']))
 			state = saved['state_dict']
-
-			# Removing 'faceModel' from the pre-trained model (trained with 'faceModel' in Phase-1 of TL) to be loaded for Phase-2 of TL without face input
-			modulesToRemove = []
-			for k in state:
-				if ('faceModel' in k):
-					modulesToRemove.append(k)
-			for moduleToRemove in modulesToRemove:
-				del state[moduleToRemove]
-			# Since face input is removed from NN, no. of input neurons in linear layer 'fc.0' changes from 320 to 256. So, 'fc.0.weight' needs to be of shape (128,256), instead of (128,320) saved in the model to be loaded.
-			# So, temporarily loading dummy tensor of zeros of shape (128,256) in state['fc.0.weight']. Later, model.fc is initialized with new nn.Sequential(), so dummy tensor removed.
-			state['fc.0.weight'] = torch.zeros((128, 256), device=GPU_device)
-
 			try:
 				model.module.load_state_dict(state)
 			except:
@@ -191,18 +179,18 @@ def main():
 			# Required only if loading a regression model to be used for Transfer Learning for classification #
 			#############################
 			# Fix all conv layers
-			# model.faceModel.conv.requires_grad = False
+			model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
 
-			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
-			lin1_inFtrs = model.fc[0].in_features
-			lin1_outFtrs = model.fc[0].out_features
-			lin2_inFtrs = model.fc[2].in_features
-			model.fc = nn.Sequential(
-				nn.Linear(lin1_inFtrs, lin1_outFtrs),
-				nn.ReLU(inplace=True),
-				nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
-				)
+			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
+			# lin1_inFtrs = model.fc[0].in_features
+			# lin1_outFtrs = model.fc[0].out_features
+			# lin2_inFtrs = model.fc[2].in_features
+			# model.fc = nn.Sequential(
+			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
+			# 	nn.ReLU(inplace=True),
+			# 	nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
+			# 	)
 
 			model.to(device=GPU_device)
 			#############################
@@ -253,7 +241,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
@@ -352,7 +340,7 @@ def main():
 
 	# for epoch in range(0, epoch):
 	# 	adjust_learning_rate(optimizer, epoch)
-	
+
 	train_loss = []
 	train_epochs = list(range(epoch, epochs+1))
 	val_acc = []
