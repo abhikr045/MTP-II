@@ -34,15 +34,15 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blurFace-r15-noEyes_checkpoints_train'
-CHECKPOINT_LOAD_FILE = 'checkpoint_train_28_best.pth.tar'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-dummy-eyes_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_25.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
 METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
-VAL_ON = 'test'
+VAL_ON = 'val'
 
 TOT_VALID = 786732	# total valid frames in the dataset
 KIND = 'classification'
@@ -192,17 +192,17 @@ def main():
 			#############################
 			# Fix all conv layers
 			model.faceModel.conv.requires_grad = False
-			# model.eyeModel.requires_grad = False
+			model.eyeModel.requires_grad = False
 
-			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
-			# lin1_inFtrs = model.fc[0].in_features
-			# lin1_outFtrs = model.fc[0].out_features
-			# lin2_inFtrs = model.fc[2].in_features
-			# model.fc = nn.Sequential(
-			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
-			# 	nn.ReLU(inplace=True),
-			# 	nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
-			# 	)
+			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
+			lin1_inFtrs = model.fc[0].in_features
+			lin1_outFtrs = model.fc[0].out_features
+			lin2_inFtrs = model.fc[2].in_features
+			model.fc = nn.Sequential(
+				nn.Linear(lin1_inFtrs, lin1_outFtrs),
+				nn.ReLU(inplace=True),
+				nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
+				)
 
 			model.to(device=GPU_device)
 			#############################
@@ -253,7 +253,7 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	trainableParams = list(model.faceModel.fc.parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
 	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)

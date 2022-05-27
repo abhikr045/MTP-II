@@ -110,19 +110,19 @@ class ITrackerData(data.Dataset):
 		self.eyeRightMean = loadMetadata(os.path.join(meanPath, '%s_right_224.mat' % meanFile))['image_mean']
 		
 		self.transformFace = transforms.Compose([
-            blurFace(r=15),
+			# blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.faceMean),
 		])
 		self.transformEyeL = transforms.Compose([
-            # blurFace(r=15),
+			# blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.eyeLeftMean),
 		])
 		self.transformEyeR = transforms.Compose([
-            # blurFace(r=15),
+			# blurFace(r=15),
 			transforms.Resize(self.imSize),
 			transforms.ToTensor(),
 			SubtractMean(meanImg=self.eyeRightMean),
@@ -171,8 +171,11 @@ class ITrackerData(data.Dataset):
 		index = self.indices[index]
 		# print('img = %05d_%05d' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
 		imFacePath = os.path.join(self.dataPath, '%05d/appleFace/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
-		imEyeLPath = os.path.join(self.dataPath, '%05d/appleLeftEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
-		imEyeRPath = os.path.join(self.dataPath, '%05d/appleRightEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+		##### Dummy eyes
+		# imEyeLPath = os.path.join(self.dataPath, '%05d/appleLeftEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+		# imEyeRPath = os.path.join(self.dataPath, '%05d/appleRightEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+		imEyeLPath = 'data/dummy_eyes/dummy_eyeL.jpg'	# dummy_eyeL.jpg = data/RF_extracted_UK_dataset/00109/appleLeftEye/01762.jpg
+		imEyeRPath = 'data/dummy_eyes/dummy_eyeR.jpg'	# dummy_eyeR.jpg = data/RF_extracted_UK_dataset/00109/appleRightEye/01762.jpg
 
 		imFace = self.loadImage(imFacePath)
 		imEyeL = self.loadImage(imEyeLPath)
