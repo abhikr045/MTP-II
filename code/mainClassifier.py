@@ -34,10 +34,10 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_UK_directClassif-blurFace-r15_checkpoints_train'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_directClassif-noFace_checkpoints_train'
 CHECKPOINT_LOAD_FILE = ''
 CHECKPOINT_SAVE_FILE = 'checkpoint'
-METAFILE = 'metadata_gazeLR.mat'
+METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
@@ -85,7 +85,7 @@ prec1 = 0
 best_prec1 = 0
 lr = base_lr
 
-GPU_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+GPU_device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 def load_checkpoint(filename=CHECKPOINT_LOAD_FILE):
