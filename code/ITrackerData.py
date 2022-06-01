@@ -63,13 +63,13 @@ class blurFace(object):
 		self.r = r
 
 	def __call__(self, PILimg):
-		# blurImg = PILimg.filter(ImageFilter.GaussianBlur(radius=self.r))
-		# # blurImg.save('results/blurFace/sampleBlurFace_r-%d.jpg' % self.r)
-		# return blurImg
+		blurImg = PILimg.filter(ImageFilter.GaussianBlur(radius=self.r))
+		# blurImg.save('results/blurFace/sampleBlurFace_r-%d.jpg' % self.r)
+		return blurImg
 
-		blackImg = Image.new('RGB', (224,224), "black")
-		# blackImg.save('results/blackFace.jpg')
-		return blackImg
+		# blackImg = Image.new('RGB', (224,224), "black")
+		# # blackImg.save('results/blackFace.jpg')
+		# return blackImg
 
 class ITrackerData(data.Dataset):
 	def __init__(self, dataPath, metafile, meanPath, split='train', imSize=(224,224), gridSize=(25, 25), kind='regression', device=None):
@@ -189,7 +189,8 @@ class ITrackerData(data.Dataset):
 			gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
 			gaze = torch.FloatTensor(gaze)
 		elif self.kind == 'classification':
-			gaze = self.metadata['gazeLR'][index]
+			# gaze = self.metadata['gazeLR'][index]
+			gaze = self.metadata['gazeLRC'][index]
 		else:
 			print("INVALID kind of dataset (expected 'regression' or 'classification')..!!")
 			sys.exit(1)

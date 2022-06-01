@@ -34,11 +34,12 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_TL-blackedFace_checkpoints_train'
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/UK/RF_subsetUK-train-2.5percent_TL-blurFace-r15_checkpoints_train'
 CHECKPOINT_LOAD_FILE = 'checkpoint_train_32_best.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
-METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
+METAFILE = 'metadata.mat'
 MEAN_PATH = 'metadata/'
+outProbCSV_path = 'results/RF_subset2WayUK_TL-blurFace-r15_outProb-allTest.csv'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
 TRAIN_ON = 'train'
@@ -224,17 +225,17 @@ def main():
 	# No. of gazeR in 'train' =    47,217
 	# No. of gazeOut in 'train' = 564,253
 
-	# gazeLRC_classes = dataTrain.metadata['gazeLRC']
-	# trainSplit = dataTrain.metadata['labelTrain']
-	# trainGazeLRC = gazeLRC_classes[trainSplit == 1]
-	# gazeClasses = np.array([0,1,2])	# For UK dataset OR iPadAir2 subset of MIT, 3 labels - L,C & R
-	gazeLR_classes = dataTrain.metadata['gazeLR']
+	gazeLRC_classes = dataTrain.metadata['gazeLRC']
 	trainSplit = dataTrain.metadata['labelTrain']
-	trainGazeLR = gazeLR_classes[trainSplit == 1]
-	gazeClasses = np.array([0,1])
+	trainGazeLRC = gazeLRC_classes[trainSplit == 1]
+	gazeClasses = np.array([0,1,2])	# For UK dataset OR iPadAir2 subset of MIT, 3 labels - L,C & R
+	# gazeLR_classes = dataTrain.metadata['gazeLR']
+	# trainSplit = dataTrain.metadata['labelTrain']
+	# trainGazeLR = gazeLR_classes[trainSplit == 1]
+	# gazeClasses = np.array([0,1])
 
 	# gazeClasses = np.array([0,1,2,3])	# For MIT dataset, 4 labels - L,C,R & Out
-	weights = compute_class_weight('balanced', classes=gazeClasses, y=trainGazeLR)
+	weights = compute_class_weight('balanced', classes=gazeClasses, y=trainGazeLRC)
 	weights = weights / weights.sum()
 	weights = torch.Tensor(weights)
 	criterion = nn.CrossEntropyLoss(weight=weights).to(device=GPU_device)
@@ -496,26 +497,32 @@ def validate(val_loader, model, criterion, epoch):
 		with torch.no_grad():
 			output = model(imFace, imEyeL, imEyeR, faceGrid)
 
+		outProb = softmax(output)
+		outRows = torch.cat((torch.unsqueeze(gaze.to(dtype=torch.float32), 1), outProb), dim=1)
+		outRows_list = outRows.tolist()
+		outProbWriter.writerows(outRows_list)
+
 		# accOnlyLRC = torch.cat((accOnlyLRC, torch.stack((torch.argmax(output, dim=1).cpu(), gaze.cpu()), dim=1)))
 
-		loss = criterion(output, gaze)
-		losses.update(loss.data.item(), imFace.size(0))
+		# loss = criterion(output, gaze)
+		# losses.update(loss.data.item(), imFace.size(0))
 
-		# outputLRC = gazeXY2label(output.cpu().numpy(), tablet='HuaweiMediaPadM3Lite10')
-		accuracy = classifAccuracy(torch.argmax(output, dim=1), gaze)
-		accuracies.update(accuracy, imFace.size(0))
+		# # outputLRC = gazeXY2label(output.cpu().numpy(), tablet='HuaweiMediaPadM3Lite10')
+		# accuracy = classifAccuracy(torch.argmax(output, dim=1), gaze)
+		# accuracies.update(accuracy, imFace.size(0))
 	 
-		# measure elapsed time
-		batch_time.update(time.time() - end)
-		end = time.time()
+		# # measure elapsed time
+		# batch_time.update(time.time() - end)
+		# end = time.time()
 
-		print('Epoch (val): [{0}][{1}/{2}]\t'
-					'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-					'Accuracy {acc.val:.4f} ({acc.avg:.4f})\t'.format(
-					epoch, i+1, len(val_loader), batch_time=batch_time,
-					acc=accuracies))
+		print('Epoch (val): [{0}][{1}/{2}]'.format(epoch, i+1, len(val_loader)))
+		# print('Epoch (val): [{0}][{1}/{2}]\t'
+		# 			'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+		# 			'Accuracy {acc.val:.4f} ({acc.avg:.4f})\t'.format(
+		# 			epoch, i+1, len(val_loader), batch_time=batch_time,
+		# 			acc=accuracies))
 
-	return accuracies.avg
+	# return accuracies.avg
 
 
 def calcGazaXY(val_loader, model, criterion, epoch):
@@ -579,7 +586,12 @@ class AverageMeter(object):
 
 if __name__ == "__main__":
 	tic = time.time()
+	outProbCSV = open(outProbCSV_path, 'w')
+	outProbWriter = csv.writer(outProbCSV)
+	outProbWriter.writerow(['GrTr 3-Way Gaze', 'Prob(L)', 'Prob(R)'])
+	softmax = nn.Softmax(dim=1)
 	main()
+	outProbCSV.close()
 	toc = time.time()
 	print('Total processing time = %s' % datetime.timedelta(seconds = toc-tic))
 	print('DONE')
