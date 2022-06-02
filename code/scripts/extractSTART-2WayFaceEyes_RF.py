@@ -147,7 +147,9 @@ def prepare_START_2Way_RF_dataset():
 
 			metadata['labelRecNum'].append(int(folderNum))
 			metadata['frameIndex'].append(int(frameNum))
-			metadata['gazeLR'].append(0 if gazeLabel == 'L' else 1)
+			metadata['gazeLR'].append(1 if gazeLabel == 'L' else 0)     # NOTE - Rahul's 2-Way LR annotation is just opposite to mine.
+                                                                        # My annotation - whether subject is looking at his/her left/right
+                                                                        # Rahul's annotation - whether the subject is looking left/right in the image frame
 
 			if (f % 100 == 0):
 				toc = time.time()
@@ -186,7 +188,7 @@ def prepare_START_2Way_RF_dataset():
 	sio.savemat(metapath, metadata)
 
 
-def split_dataset(train_frac, val_frac):
+def split_dataset_randomly(train_frac, val_frac):
 	metapath = os.path.join(out_data_dir, meta_filename)
 	metadata = sio.loadmat(metapath, squeeze_me=True, struct_as_record=False)
 	
@@ -216,6 +218,40 @@ def split_dataset(train_frac, val_frac):
 	sio.savemat(metapath, metadata)
 
 
+def split_dataset(train_folderNums, val_folderNums, test_folderNums):
+	metapath = os.path.join(out_data_dir, meta_filename)
+	metadata = sio.loadmat(metapath, squeeze_me=True, struct_as_record=False)
+
+	labelRecNums = metadata['labelRecNum']
+	F = len(labelRecNums)
+	metadata['labelTrain'] = np.zeros(F, dtype=bool)
+	metadata['labelVal'] = np.zeros(F, dtype=bool)
+	metadata['labelTest'] = np.zeros(F, dtype=bool)
+	
+	trainIDs = []
+	valIDs = []
+	testIDs = []
+	for f in range(F):
+		if (labelRecNums[f] in train_folderNums):
+			trainIDs.append(f)
+		elif (labelRecNums[f] in val_folderNums):
+			valIDs.append(f)
+		elif (labelRecNums[f] in test_folderNums):
+			testIDs.append(f)
+		else:
+			print("ERROR: labelRecNum not found in train/val/test split")
+			exit()
+
+	trainIDs = np.array(trainIDs)
+	valIDs = np.array(valIDs)
+	testIDs = np.array(testIDs)
+
+	metadata['labelTrain'][trainIDs] = 1
+	metadata['labelVal'][valIDs] = 1
+	metadata['labelTest'][testIDs] = 1
+	sio.savemat(metapath, metadata)
+
+
 if __name__ == '__main__':
 	out_data_dir = 'data/RF_extracted_START-2Way_dataset'
 	in_data_dir = 'data/csailDataCreator'
@@ -226,27 +262,39 @@ if __name__ == '__main__':
 	FACE_GRID_SIZE = np.array([25, 25])		# [cols, rows]
 
 	child_dirs = {
-		'1':'child20',	# frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
-		'2':'child28',	# frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
-		'3':'child101',	# frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
-		'4':'self',		# 1.png - XYZ.png							-->  png_seq_gen()
-		'5':'child70',	# 000.bmp - 999.bmp ; 1000.bmp - 1224.bmp	-->  bmp_seq_gen()
-		'6':'child72',	# 000.bmp - 999.bmp ; 1000.bmp - 1225.bmp	-->  bmp_seq_gen()
-		'7':'child141',	# frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
-		'8':'child162',	# frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
-		'9':'kohli',	# 000.bmp - 999.bmp ; 1000.bmp - 1226.bmp	-->  bmp_seq_gen()
-		'10':'nadir',	# 000.bmp - 999.bmp ; 1000.bmp - 1170.bmp	-->  bmp_seq_gen()
-		'11':'yellowT'	# 000.bmp - 999.bmp ; 1000.bmp - 1227.bmp	-->  bmp_seq_gen()
+		'1':'child20',	# valid frame count =  186 (test)  ; frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
+		'2':'child28',	# valid frame count =  235 (val)   ; frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
+		'3':'child101',	# valid frame count =  367 (val)   ; frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
+		'4':'self',		# valid frame count = 1229 (train) ; 1.png - XYZ.png							-->  png_seq_gen()
+		'5':'child70',	# valid frame count =  701 (train) ; 000.bmp - 999.bmp ; 1000.bmp - 1224.bmp	-->  bmp_seq_gen()
+		'6':'child72',	# valid frame count = 1224 (train) ; 000.bmp - 999.bmp ; 1000.bmp - 1225.bmp	-->  bmp_seq_gen()
+		'7':'child141',	# valid frame count =  236 (val)   ; frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
+		'8':'child162',	# valid frame count =  210 (test)  ; frame1.jpg - frameXYZ.jpg					-->  jpg_seq_gen()
+		'9':'kohli',	# valid frame count = 1142 (test)  ; 000.bmp - 999.bmp ; 1000.bmp - 1226.bmp	-->  bmp_seq_gen()
+		'10':'nadir',	# valid frame count = 1166 (train) ; 000.bmp - 999.bmp ; 1000.bmp - 1170.bmp	-->  bmp_seq_gen()
+		'11':'yellowT'	# valid frame count = 1221 (train) ; 000.bmp - 999.bmp ; 1000.bmp - 1227.bmp	-->  bmp_seq_gen()
 	}
+    # Total valid frames in metadata.mat = 7917
+    # train = 1229+701+1224+1166+1221 = 5541
+    # val = 235+367+236 = 838
+    # test = 186+210+1142 = 1538
+    # NOTE - Invalid frames = frames either with invalid GrTr (e.g. "NOK", "closed") or more than 1 faces in them
 
 	if (not os.path.exists(out_data_dir)):
 		os.makedirs(out_data_dir)
 
 	# prepare_START_2Way_RF_dataset()
-
 	# NOTE - train, val & test set to be divided after prepare_START_2Way_RF_dataset()
-	train_frac = 0.7
-	val_frac = 0.1
-	# test --> remaining frames
-	random.seed(0)
-	split_dataset(train_frac, val_frac)
+	
+	# # Dividing data into train/val/test set randomly --> not correct approach
+	# train_frac = 0.7
+	# val_frac = 0.1
+	# # test --> remaining frames
+	# random.seed(0)
+	# split_dataset_randomly(train_frac, val_frac)
+
+	# Dividing data into train/val/test set with different subjects in train/val/test
+	train_folderNums = [4, 5, 6, 10, 11]
+	val_folderNums = [2, 3, 7]
+	test_folderNums = [1, 8, 9]
+	split_dataset(train_folderNums, val_folderNums, test_folderNums)
