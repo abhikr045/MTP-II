@@ -34,10 +34,10 @@ def str2bool(v):
 
 
 # NOTE - check CHECKPOINTS_PATH before running
-CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/RF_subsetUK-train-2.5percent_directClassif-noFace_checkpoints_train'
-CHECKPOINT_LOAD_FILE = ''
+CHECKPOINTS_PATH = 'saved_models/2WayGazeClassification/START-2Way/RF_subsetSTART-2Way-train-10percent_TL-Phase1-2WayUK-blackedFace_checkpoints_train'
+CHECKPOINT_LOAD_FILE = 'checkpoint_train_35.pth.tar'
 CHECKPOINT_SAVE_FILE = 'checkpoint'
-METAFILE = 'metadata_subset_train-2.5percent_gazeLR.mat'
+METAFILE = 'metadata_subset_train-10.0percent.mat'
 MEAN_PATH = 'metadata/'
 
 # NOTE - check which data to Train on and which data to Validate the accuracy on
@@ -75,7 +75,7 @@ doLoad = not args.reset # Load checkpoint at the beginning
 doTest = args.sink # Only run test, no training
 
 workers = 4
-epochs = 35
+epochs = 45
 batch_size = 100 # Change if out of cuda memory
 
 base_lr = 0.001
@@ -85,7 +85,7 @@ prec1 = 0
 best_prec1 = 0
 lr = base_lr
 
-GPU_device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+GPU_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def load_checkpoint(filename=CHECKPOINT_LOAD_FILE):
@@ -194,15 +194,15 @@ def main():
 			model.faceModel.conv.requires_grad = False
 			model.eyeModel.requires_grad = False
 
-			# # Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
-			# lin1_inFtrs = model.fc[0].in_features
-			# lin1_outFtrs = model.fc[0].out_features
-			# lin2_inFtrs = model.fc[2].in_features
-			# model.fc = nn.Sequential(
-			# 	nn.Linear(lin1_inFtrs, lin1_outFtrs),
-			# 	nn.ReLU(inplace=True),
-			# 	nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
-			# 	)
+			# Reset (i.e. trainable & initialized with random weights) last 2 FC layers with o/p of last FC layer as class labels L/R
+			lin1_inFtrs = model.fc[0].in_features
+			lin1_outFtrs = model.fc[0].out_features
+			lin2_inFtrs = model.fc[2].in_features
+			model.fc = nn.Sequential(
+				nn.Linear(lin1_inFtrs, lin1_outFtrs),
+				nn.ReLU(inplace=True),
+				nn.Linear(lin2_inFtrs, 2),	# 2 outputs corresponding to LR
+				)
 
 			model.to(device=GPU_device)
 			#############################
@@ -253,14 +253,14 @@ def main():
 	# criterion = classifAccuracy
 
 	##### Specify the parameters to be optimized (i.e. only the trainable params) in Transfer Learning #####
-	# trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
-	# optimizer = torch.optim.SGD(trainableParams,
-	# 							base_lr, momentum=momentum,
-	# 							weight_decay=weight_decay)
-	########################################################################################################
-	optimizer = torch.optim.SGD(model.parameters(),
+	trainableParams = list(model.faceModel.fc.parameters()) + list(model.eyesFC[0].parameters()) + list(model.gridModel.parameters()) + list(model.fc.parameters())
+	optimizer = torch.optim.SGD(trainableParams,
 								base_lr, momentum=momentum,
 								weight_decay=weight_decay)
+	########################################################################################################
+	# optimizer = torch.optim.SGD(model.parameters(),
+	# 							base_lr, momentum=momentum,
+	# 							weight_decay=weight_decay)
 
 	# Quick test
 	if doTest:
@@ -382,15 +382,15 @@ def main():
 		train_loss.append(cur_train_loss)
 
 		print("Training DONE. Not saving checkpoint for this ...")
-		save_checkpoint({
-			'epoch': epoch,
-			'state_dict': model.state_dict(),
-			'best_prec1': best_prec1,
-			'train_losses': train_loss,
-			'val_accs': val_acc
-		}, False, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
-		print('Checkpoint saved successfully.')
-		# print('Training DONE. Not saving checkpoint for this...')
+		# save_checkpoint({
+		# 	'epoch': epoch,
+		# 	'state_dict': model.state_dict(),
+		# 	'best_prec1': best_prec1,
+		# 	'train_losses': train_loss,
+		# 	'val_accs': val_acc
+		# }, False, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
+		# print('Checkpoint saved successfully.')
+		# # print('Training DONE. Not saving checkpoint for this...')
 
 		# evaluate on validation set
 		prec1 = validate(val_loader, model, criterion, epoch)
@@ -399,15 +399,15 @@ def main():
 		# remember best prec@1 and save checkpoint
 		is_best = prec1 > best_prec1
 		best_prec1 = max(prec1, best_prec1)
-		# if (is_best or epoch == epochs):
-		save_checkpoint({
-			'epoch': epoch,
-			'state_dict': model.state_dict(),
-			'best_prec1': best_prec1,
-			'train_losses': train_loss,
-			'val_accs': val_acc
-		}, is_best, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
-		print('Checkpoint overwritten successfully.')
+		if (is_best or epoch == epochs):
+			save_checkpoint({
+				'epoch': epoch,
+				'state_dict': model.state_dict(),
+				'best_prec1': best_prec1,
+				'train_losses': train_loss,
+				'val_accs': val_acc
+			}, is_best, '%s_%s_%d.pth.tar' % (CHECKPOINT_SAVE_FILE, TRAIN_ON, epoch))
+			print('Checkpoint overwritten successfully.')
 		# print('Validation DONE. Not saving checkpoint for this...')
 	###########################################
 

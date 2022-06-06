@@ -63,13 +63,13 @@ class blurFace(object):
 		self.r = r
 
 	def __call__(self, PILimg):
-		blurImg = PILimg.filter(ImageFilter.GaussianBlur(radius=self.r))
-		# blurImg.save('results/blurFace/sampleBlurFace_r-%d.jpg' % self.r)
-		return blurImg
+		# blurImg = PILimg.filter(ImageFilter.GaussianBlur(radius=self.r))
+		# # blurImg.save('results/blurFace/sampleBlurFace_r-%d.jpg' % self.r)
+		# return blurImg
 
-		# blackImg = Image.new('RGB', (224,224), "black")
-		# # blackImg.save('results/blackFace.jpg')
-		# return blackImg
+		blackImg = Image.new('RGB', (224,224), "black")
+		# blackImg.save('results/blackFace.jpg')
+		return blackImg
 
 class ITrackerData(data.Dataset):
 	def __init__(self, dataPath, metafile, meanPath, split='train', imSize=(224,224), gridSize=(25, 25), kind='regression', device=None):
@@ -102,6 +102,8 @@ class ITrackerData(data.Dataset):
 			meanFile = 'MIT_mean'
 		elif 'UK' in self.dataPath:
 			meanFile = 'UK_mean'
+		elif 'START' in self.dataPath:
+			meanFile = 'START-2Way_mean'
 		else:
 			raise RuntimeError('Unknown Mean files need to be loaded..!!')
 
