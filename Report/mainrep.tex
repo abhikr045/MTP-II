@@ -1,0 +1,242 @@
+%%% Time-stamp: <mainrep.tex 19:57, 17 Jul 2016 by P Sunthar>
+%%% $Log:$
+% This document describes how to use iitbreport style
+%********************************************************************
+
+%\documentclass[11pt,a4paper,openright]{report}
+\documentclass[twoside]{iitbreport}
+
+%% Default spacing: 1.5
+%% Default font size: 12pt
+%% Default font: txfonts (similar to times new roman) 
+
+%% Selectively comment out sections that you want to be left out but
+%% maintaining the page numbers and other \ref
+% \includeonly{%
+%   intro/introduction,
+%   lit/literature,
+%   expt/experimental,
+%   rnd/results, 
+%   dec,abs,pub,ack
+% }
+
+%%% Some commonly used packages (make sure your LaTeX installation
+%%% contains these packages, if not ask your senior to help installing
+%%% the packages)
+
+\setlength {\marginparwidth }{2cm}
+\usepackage{todonotes}
+
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\renewcommand\tabularxcolumn[1]{m{#1}}
+\usepackage[export]{adjustbox}
+
+%%% Macro definitions for Commonly used symbols
+\newcommand{\Rey}{\ensuremath{\mathrm{Re}}}
+\newcommand{\avg}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\tenpow}[1]{\ensuremath{\times 10^{#1}}}
+\newcommand{\pder}[2]{\ensuremath{\frac{\partial#1}{\partial#2}}}
+
+% Referencing macros
+\newcommand{\Eqref}[1]{Equation~\eqref{#1}}
+\newcommand{\Tabref}[1]{Table~\ref{#1}}
+\newcommand{\Figref}[1]{Figure~\ref{#1}}
+\newcommand{\Appref}[1]{Appendix~\ref{#1}}
+
+
+\begin{document}
+	
+%%********************************Frontmatter***********************
+% In frontmatter everything comes with roman numbering	
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+%*******************************************************************
+%                         Title Page                            
+%*******************************************************************
+\title{Feature Preserving Face Redaction of Videos in Indoor Settings}
+\author{Abhinav Kumar}
+
+%% Print the date. Today's date comes by default, change it here to 
+%% other date format, if required:
+
+%\date{\today}
+% \date{23 June, 2022}
+
+
+%% The type of the report can be set here
+
+\reporttype{MTech Project Report}
+% \reporttype{A Seminar Report}
+%\reporttype{A Thesis}
+%\reporttype{A Dissertation}
+%\reporttype{A Project Report}
+
+%% Name of the degree
+% \degree{Doctor of Philosophy}
+\degree{Master of Technology}
+
+
+%% Department/Centre Name
+\dept{Department of Computer Science \& Engineering}
+
+%% Supervisor and cosupervisor/excosupervisor are not essential parts
+%% of a report title page, as it is your report!
+
+%% But if you **have** to put it uncomment these
+\supervisor{Prof. Sharat Chandran}
+%\cosupervisor{Co-super name}
+%\excosupervisor{External Supervisor}
+
+%% Roll number
+\rollnum{19305R001}
+
+\maketitle
+
+%*******************************************************************
+%                         Copyright Page                          
+%******************************************************************* 
+%\mycopyright                    
+
+%*******************************************************************
+%                         Dedication Page                         
+%*******************************************************************
+\dedication[Dedicated to \ldots \\ my mother, Mrs. Manju Singh \\ and \\ my father, Mr. Dharmendra Kumar Singh]
+%\addintoc{Dedication}
+
+%*******************************************************************
+%                        Certificate Page                         
+%*******************************************************************
+%\makecertificate[change title name]{report type} 
+% \makecertificate{seminar report} 
+%\makecertificate{thesis}
+%\makecertificate{dissertation}
+\makecertificate{MTech Project report}
+
+%\addintoc{Certificate}
+
+%*******************************************************************
+%                         Approval Sheet                         
+%*******************************************************************
+\makeapproval{MTech Project report}
+% \makeapproval{dissertation}
+
+%*******************************************************************
+%                          Declaration                           
+%*******************************************************************
+\include{Declaration} 
+%\addintoc{Declaration}
+
+%******************************************************************
+%                          Abstract                             
+%******************************************************************  
+\include{Abstract}                    
+
+%******************************************************************
+%                         Contents list                         
+%******************************************************************
+%\figurespagefalse
+%\tablespagefalse
+\makecontents % Creats toc, lof, and lot
+
+%******************************************************************
+%                        Notations                              
+%******************************************************************
+%\notations[4cm]{List of Symbols}
+%\todo{Remove List of Symbols if not used. Possible usage: ASD}
+
+%%********************************Mainmatter***********************
+% In mainmatter everything comes with arabic numbering	
+\cleardoublepage
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+%******************************************************************
+%                         Chapters                           
+%****************************************************************** 
+\include{Introduction/introduction}
+\include{LiteratureSurvey/literature}
+\include{Dataset/dataset}
+\include{GazePreservingRedaction/redaction}
+\include{DistancePreservingRedaction/redaction}
+\include{ResultsConclusions/result}
+
+%****************************************************************
+%                         Appendices                           
+%****************************************************************
+%% Additional, supporting material, such as codes, derivations, etc., can be placed in the appendix
+\appendix
+\chapter{Facial Proximity calculation: Orthographic to Perspective Method}
+Retina Face uses the same coordinate regression method used in Menpo \citep{menpo}, which uses a scaled orthographic camera model and scales the world coordinate system to the pixel coordinate system. But the camera used to capture images in the real world actually follows a perspective camera model instead. Therefore, a possible approach to facial proximity calculation could be to try to first invert the scaled orthographic projection applied intrinsically by Retina Face, and then apply a perspective camera model to obtain the proximity.
+
+In order to do so, we first formulate the landmark coordinate model of Retina Face as follows:
+
+\begin{equation}
+\label{eq:retinaFaceModel}
+X_{RF} = O_{fst} ~\sigma ~T ~R ~X_W
+\end{equation}
+
+where, 
+
+\qquad $X_{RF}$ = homogeneous 3-D landmark coordinates predicted by RetinaFace (4x1 matrix)
+
+\qquad $O_{fst}$ = camera offset in pixel coordinates (4x4 matrix)
+
+\qquad $\sigma$ = uniform scale parameter of scaled orthographic camera model (4x4 matrix)
+
+\qquad $T$ = translation component of extrinsic camera parameters (4x4 matrix)
+
+\qquad $R$ = rotation component of extrinsic camera parameters (4x4 matrix)
+
+\qquad $X_W$ = homogeneous world coordinates of landmarks (4x1 matrix)
+
+Then, we invert the orthographic projection as follows and apply the perspective camera model:
+
+\begin{equation}
+\label{eq:ortho2perspective}
+s [x_{RF},~y_{RF},~1]^T = M_I ~[I | 0] ~T_z ~\sigma^{-1} ~O_{fst}^{-1} ~X_{RF}
+\end{equation}
+
+where,
+
+\qquad $s$ = the homogeneous coordinate
+
+\qquad $x_{RF}$, $y_{RF}$ = XY coordinates in the image
+
+\qquad $M_I$ = intrinsic parameters of calibrated camera
+
+\qquad $T_z$ = required proximity of face from camera\\
+
+The above formulations explain an interesting mathematical approach to calculating the facial proximity. The idea is based on a set of transformations used to arrive at a perspective projection from an orthographic projection.
+
+
+%******************************************************************
+%                         Bibliography or References          
+%******************************************************************  
+\bibliography{mylit}     
+
+%*******************************************************************
+%                         List of publications               
+%******************************************************************
+% \include{pub}            
+
+%*******************************************************************
+%                        Acknowledgements                    
+%******************************************************************* 
+\include{Acknowledgements}           
+
+%*******************************************************************
+%                        About author                    
+%*******************************************************************
+% \colophon % remove this command while using this file.
+
+% GAME OVER
+%*******************************************************************
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
